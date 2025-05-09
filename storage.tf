@@ -5,5 +5,5 @@ resource "google_storage_bucket" "attendance_system_bucket" {
   storage_class = "STANDARD"
   
   # Wait for Storage API to be enabled
-  depends_on = [google_project_service.storage_api]
+  depends_on = [google_project_service.required_apis]
 }
