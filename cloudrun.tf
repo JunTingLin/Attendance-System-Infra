@@ -52,7 +52,7 @@ resource "google_project_service" "cloudrun_apis" {
 
   project            = "tsmc-attendance-system-458811"
   service            = each.key
-  disable_on_destroy = false
+  disable_on_destroy = true
 
   depends_on = [google_project_service.required_apis]
 }
@@ -83,6 +83,7 @@ resource "google_artifact_registry_repository" "attendance_repo" {
 resource "google_cloud_run_v2_service" "attendance_service" {
   name     = "attendance-system-api"
   location = "asia-east1"
+  deletion_protection = false
 
   template {
     containers {
@@ -183,4 +184,29 @@ resource "google_cloud_run_v2_service_iam_member" "public_access" {
   name     = google_cloud_run_v2_service.attendance_service.name
   role     = "roles/run.invoker"
   member   = "allUsers"
+}
+
+resource "google_cloudbuild_trigger" "attendance_build_trigger" {
+  name        = "attendance-build-trigger"
+  description = "Trigger for building and deploying Attendance System from GitHub"
+  
+
+  service_account = "projects/tsmc-attendance-system-458811/serviceAccounts/terraform-junting@tsmc-attendance-system-458811.iam.gserviceaccount.com"
+
+  github {
+    owner = "JunTingLin"
+    name  = "Attendance-System-API"
+    push {
+      branch = "^main$"
+    }
+  }
+  
+  filename = "cloudbuild.yaml"
+  
+  depends_on = [
+    google_project_iam_member.cloudbuild_storage_admin,
+    google_project_iam_member.cloudbuild_artifact_admin,
+    google_project_iam_member.cloudbuild_run_admin,
+    google_project_iam_member.cloudbuild_service_account_user
+  ]
 }
