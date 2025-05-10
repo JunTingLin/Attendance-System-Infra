@@ -1,11 +1,3 @@
-# Enable Cloud SQL Admin API
-resource "google_project_service" "sql_api" {
-  project            = "tsmc-attendance-system-458811"
-  service            = "sqladmin.googleapis.com"
-  disable_on_destroy = false
-}
-
-
 # Create a MySQL instance
 resource "google_sql_database_instance" "attendance_mysql" {
   name             = "attendance-mysql-instance"
