@@ -1,4 +1,45 @@
-# cloudrun.tf
+# 獲取專案編號
+data "google_project" "project" {
+  project_id = "tsmc-attendance-system-458811"
+}
+
+# 定義服務帳戶變數
+locals {
+  cloudbuild_sa = "serviceAccount:${data.google_project.project.number}@cloudbuild.gserviceaccount.com"
+  terraform_sa = "serviceAccount:terraform-junting@tsmc-attendance-system-458811.iam.gserviceaccount.com"
+}
+
+# 授予 Terraform 服務帳戶 Storage Admin 權限
+resource "google_project_iam_member" "terraform_storage_admin" {
+  project = "tsmc-attendance-system-458811"
+  role    = "roles/storage.admin"
+  member  = local.terraform_sa
+}
+
+# 授予 Cloud Build 服務帳戶所有必要權限
+resource "google_project_iam_member" "cloudbuild_storage_admin" {
+  project = "tsmc-attendance-system-458811"
+  role    = "roles/storage.admin"
+  member  = local.cloudbuild_sa
+}
+
+resource "google_project_iam_member" "cloudbuild_artifact_admin" {
+  project = "tsmc-attendance-system-458811"
+  role    = "roles/artifactregistry.admin"
+  member  = local.cloudbuild_sa
+}
+
+resource "google_project_iam_member" "cloudbuild_run_admin" {
+  project = "tsmc-attendance-system-458811"
+  role    = "roles/run.admin"
+  member  = local.cloudbuild_sa
+}
+
+resource "google_project_iam_member" "cloudbuild_service_account_user" {
+  project = "tsmc-attendance-system-458811"
+  role    = "roles/iam.serviceAccountUser"
+  member  = local.cloudbuild_sa
+}
 
 # Enable required APIs for Cloud Run and related services
 resource "google_project_service" "cloudrun_apis" {
@@ -60,7 +101,7 @@ resource "google_cloud_run_v2_service" "attendance_service" {
 
       env {
         name  = "DB_NAME"
-        value = "Attendance_System"
+        value = "attendance_system"
       }
 
       env {
@@ -142,29 +183,4 @@ resource "google_cloud_run_v2_service_iam_member" "public_access" {
   name     = google_cloud_run_v2_service.attendance_service.name
   role     = "roles/run.invoker"
   member   = "allUsers"
-}
-
-# Create Cloud Build trigger for GitHub repository - Second generation connection method
-resource "google_cloudbuild_trigger" "minimal_trigger" {
-  name = "minimal-trigger"
-  
-  # 明確指定 location
-  location = "global"
-  
-  # 使用絕對最簡單的 GitHub 配置
-  github {
-    owner = "JunTingLin"
-    name = "Attendance-System-API"
-    push {
-      branch = "main"  # 不使用正則表達式，只用簡單字符串
-    }
-  }
-  
-  # 使用最簡單的構建步驟，避免變數
-  build {
-    step {
-      name = "ubuntu"
-      args = ["echo", "Hello World"]
-    }
-  }
 }
