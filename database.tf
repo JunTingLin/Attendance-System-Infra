@@ -45,14 +45,18 @@ resource "google_sql_database" "attendance_db" {
   instance = google_sql_database_instance.attendance_mysql.name
 }
 
-data "google_secret_manager_secret_version" "attendance_app_password" {
-  secret = "attendance_app"
+data "google_secret_manager_secret_version" "db_user" {
+  secret = "DB_USER"
+}
+
+data "google_secret_manager_secret_version" "db_pass" {
+  secret = "DB_PASS"
 }
 
 # Create a user
 resource "google_sql_user" "attendance_user" {
-  name        = "attendance_app"
+  name        = data.google_secret_manager_secret_version.db_user.secret_data
   instance    = google_sql_database_instance.attendance_mysql.name
-  password_wo = data.google_secret_manager_secret_version.attendance_app_password.secret_data
+  password_wo = data.google_secret_manager_secret_version.db_pass.secret_data
   # user password_wo instead of password
 }
