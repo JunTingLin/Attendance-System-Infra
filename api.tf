@@ -7,7 +7,6 @@ resource "google_project_service" "required_apis" {
     "servicenetworking.googleapis.com",    # Service Networking API
     "storage.googleapis.com",              # Cloud Storage API
     "secretmanager.googleapis.com",        # Secret Manager API
-    "container.googleapis.com",            # GKE API
   ])
 
   project            = "tsmc-attendance-system-458811"
