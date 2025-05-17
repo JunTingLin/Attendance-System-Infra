@@ -121,7 +121,8 @@ terraform destroy
 │ Help Token: AT3scP6hbfu80g4l4hclrxnKo-Pi7L5ISDAouij0PWbZ3C0dOGEKxwFNAQeed8hgH0CEkMZGXUEjiuwhySGtekIMy6jcDYY0bz9sUbOq6BEmZQ3I
 ```
 
-
+### 補充
+[Terraform 部署流程影片Demo](https://github.com/JunTingLin/Attendance-System-Infra/discussions/2)
 
 
 
