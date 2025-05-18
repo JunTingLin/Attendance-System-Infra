@@ -20,12 +20,22 @@
 
 > 注意：不要將此金鑰推送到 GitHub。
 
-## 3. 手動連結 GitHub 存放區
+## 3. 建立 Terraform State Bucket
+為了協作上的方便，使用 GCS Bucket 儲存 Terraform 的狀態檔案。
+```bash
+# Create a multi-region GCS bucket for Terraform state
+gcloud storage buckets create gs://attendance-system-terraform-state \
+    --location=ASIA \
+    --uniform-bucket-level-access
+```
+此bucketname對應[provider.tf](./provider.tf)中的`bucket = "attendance-system-terraform-state"`。
+
+## 4. 手動連結 GitHub 存放區
 前往 GCP Console → Cloud Build → 存放區 → 第1代，手動連結你的 GitHub repo（如 後端倉庫Attendance-System-API 和前端倉庫
 Attendance-System-frontend)。
 ![image](https://github.com/user-attachments/assets/03506b80-f991-4f60-876b-557e4a20af6b)
 
-## 4. 配置 Secret Manager
+## 5. 配置 Secret Manager
 基於安全考量，後端部分資訊需手動配置到 Secret Manager 中：
 + DB_PASS
 + DB_USER
@@ -35,7 +45,7 @@ Attendance-System-frontend)。
 圖中，還有看到GitHub OAuth Token (github-connection-github-oauthtoken-96d120) 這是第3點**自動**生成的，理論上前端/後端repo 各一個Token
 ![image](https://github.com/user-attachments/assets/4ef6ea99-750b-4790-b778-f5bd2596d3d2)
 
-## 5. 設定本機環境變數
+## 6. 設定本機環境變數
 + 僅在當前會話有效，也就是當你關閉終端視窗後，該環境變數就會失效
 + 若沒有正確設定該環境變數，執行 GCP 相關操作時（如 terraform apply)將會出現 403 Forbidden 權限錯誤，因為沒有正確使用服務帳戶憑證授權。
 
@@ -50,7 +60,7 @@ Linux/macOS 或 WSL (Bash)：
 export GOOGLE_APPLICATION_CREDENTIALS="tsmc-attendance-system-458811-fe93d2e0516e.json"
 ```
 
-## 6. Terraform 部署流程
+## 7. Terraform 部署流程
 
 1. 檢查 Terraform 配置檔中的 PROJECT_ID 是否已正確設定（目前已設定為 tsmc-attendance-system-458811，無需替換）。
 > 假如為新的GCP專案，請將所有.tf文件 `PROJECT_ID` 替換為你的專案 ID。
@@ -76,7 +86,7 @@ terraform apply
 Apply complete! Resources: 18 added, 0 changed, 1 destroyed.
 ```
 
-## 7. Cloud SQL Proxy 連線與資料匯入
+## 8. Cloud SQL Proxy 連線與資料匯入
 1. 下載 [Cloud SQL Proxy](https://cloud.google.com/sql/docs/mysql/connect-auth-proxy?hl=zh-tw)，與金鑰 JSON 放在同一目錄。
 
 2. 執行 Proxy (Windows PowerShell 範例)：
@@ -93,7 +103,7 @@ Apply complete! Resources: 18 added, 0 changed, 1 destroyed.
 
 
 
-### 8. Cloud Build 自動部署與手動觸發
+### 9. Cloud Build 自動部署與手動觸發
 + 在後端 repo [Attendance-System-API](https://github.com/JunTingLin/Attendance-System-API) 已經配置了 [cloudbuild.yaml](https://github.com/JunTingLin/Attendance-System-API/blob/main/cloudbuild.yaml)。
 
 + 當推送到 main 分支 時會自動觸發 Cloud Build，打包成 Docker 映像，推送至 Artifact Registry，並部署到 Cloud Run。
@@ -109,7 +119,7 @@ Apply complete! Resources: 18 added, 0 changed, 1 destroyed.
 ![image](https://github.com/user-attachments/assets/0c3d561a-5977-454d-8395-117d3e4e3178)
 
 
-### 9. 清理資源
+### 10. 清理資源
 執行以下指令清除 Terraform 管理的資源：
 ```
 terraform destroy
