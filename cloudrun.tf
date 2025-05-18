@@ -170,6 +170,15 @@ resource "google_cloud_run_v2_service" "attendance_service" {
     }
   }
 
+  
+  lifecycle {
+    ignore_changes = [
+      # 忽略 image 欄位變動，讓 Cloud Build 去更新
+      # 長遠來說還是把映像版本透過變數下發、並由 Terraform 管理最乾淨
+      template[0].containers[0].image,
+    ]
+  }
+
   depends_on = [
     google_project_service.cloudrun_apis,
     google_vpc_access_connector.attendance_connector,
