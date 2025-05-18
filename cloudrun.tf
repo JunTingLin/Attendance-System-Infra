@@ -154,7 +154,30 @@ resource "google_cloud_run_v2_service" "attendance_service" {
         name  = "SERVER_PORT"
         value = "8080"
       }
+
+      env {
+        name = "OTEL_EXPORTER_OTLP_HEADERS"
+        value_source {
+          secret_key_ref {
+            secret  = "OTEL_EXPORTER_OTLP_HEADERS"
+            version = "latest"
+          }
+        }
+      }
+      env {
+        name  = "OTEL_RESOURCE_ATTRIBUTES"
+        value = "service.name=attendance-system,service.namespace=com-tsmc-cloudnative,deployment.environment=production"
+      }
+      env {
+        name  = "OTEL_EXPORTER_OTLP_ENDPOINT"
+        value = "https://otlp-gateway-prod-ap-northeast-0.grafana.net/otlp"
+      }
+      env {
+        name  = "OTEL_EXPORTER_OTLP_PROTOCOL"
+        value = "http/protobuf"
+      }
     }
+  
 
     # VPC access configuration
     vpc_access {
