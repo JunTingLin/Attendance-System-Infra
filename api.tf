@@ -1,6 +1,8 @@
 # 啟用所有需要的 API
 resource "google_project_service" "required_apis" {
   for_each = toset([
+    "firebase.googleapis.com",
+    "firebasehosting.googleapis.com",
     "cloudresourcemanager.googleapis.com", # Cloud Resource Manager API
     "compute.googleapis.com",              # Compute Engine API
     "sqladmin.googleapis.com",             # Cloud SQL Admin API

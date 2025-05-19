@@ -6,8 +6,9 @@ resource "google_storage_bucket" "frontend_bucket" {
 
   website {
     main_page_suffix = "index.html"
-    not_found_page   = "404.html"
+    not_found_page   = "index.html"
   }
+
 
   force_destroy = true
   uniform_bucket_level_access = true
@@ -43,6 +44,7 @@ resource "google_cloudbuild_trigger" "frontend_build_trigger" {
   }
 
   filename = "cloudbuild.yaml"
+  disabled = true
 
   depends_on = [
     google_project_iam_member.cloudbuild_storage_admin,
