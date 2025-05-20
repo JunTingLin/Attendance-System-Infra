@@ -176,6 +176,23 @@ resource "google_cloud_run_v2_service" "attendance_service" {
         name  = "OTEL_EXPORTER_OTLP_PROTOCOL"
         value = "http/protobuf"
       }
+
+      # mount the Cloud SQL UNIX socket
+      volume_mounts {
+        name       = "cloudsql"
+        mount_path = "/cloudsql"
+      }
+    }
+
+    # define a volume that points to your Cloud SQL instance
+    volumes {
+      name = "cloudsql"
+
+      cloud_sql_instance {
+        instances = [
+          google_sql_database_instance.attendance_mysql.connection_name,
+        ]
+      }
     }
   
 
@@ -187,9 +204,10 @@ resource "google_cloud_run_v2_service" "attendance_service" {
 
     service_account = "terraform-junting@tsmc-attendance-system-458811.iam.gserviceaccount.com"
 
-    # Add Cloud SQL connection via proxy
+
     scaling {
-      max_instance_count = 10
+      min_instance_count = 2
+      max_instance_count = 4
     }
   }
 
