@@ -101,6 +101,7 @@ Apply complete! Resources: 18 added, 0 changed, 1 destroyed.
 
 4. 匯入資料庫腳本，使用 [Attendance_System.sql](https://github.com/JunTingLin/Attendance-System-db/blob/main/Attendance_System.sql)。
 
+> 須注意: Attendance_System.sql 最前面的`CREATE DATABASE.....` 這幾行要註解掉，因為資料庫已經在 Terraform 中建立了，只需要後面的create tabel 和假資料即可。
 
 
 ### 9. Cloud Build 自動部署與手動觸發
