@@ -11,6 +11,7 @@ resource "google_sql_database_instance" "attendance_mysql" {
 
   settings {
     tier = "db-f1-micro" # Smallest tier, good for development
+    availability_type = "REGIONAL" # Multi availability zone
 
     # Automatically increase storage as needed
     disk_autoresize = true
@@ -19,8 +20,9 @@ resource "google_sql_database_instance" "attendance_mysql" {
 
     # Disable backup
     backup_configuration {
-      enabled            = false
-      binary_log_enabled = false # Disable point-in-time recovery
+      enabled            = true
+      binary_log_enabled = true
+      start_time         = "22:00"
     }
 
     # IP configuration
