@@ -173,7 +173,7 @@ resource "google_cloud_run_v2_service" "attendance_service" {
       }
       env {
         name  = "OTEL_RESOURCE_ATTRIBUTES"
-        value = "service.name=attendance-system,service.namespace=com-tsmc-cloudnative,deployment.environment=production"
+        value = "service.name=attendance-system,service.namespace=2025.tsmc.cloudnative,deployment.environment=production"
       }
       env {
         name  = "OTEL_EXPORTER_OTLP_ENDPOINT"
