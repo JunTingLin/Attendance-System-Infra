@@ -89,6 +89,13 @@ resource "google_cloud_run_v2_service" "attendance_service" {
     containers {
       image = "us-docker.pkg.dev/cloudrun/container/hello" # Initial placeholder image
 
+      resources {
+        limits = {
+          cpu    = "1000m"
+          memory = "1Gi"
+        }
+      }
+
       # Environment variables (some is from Secret Manager)
       env {
         name  = "SPRING_PROFILES_ACTIVE"
