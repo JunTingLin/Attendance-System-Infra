@@ -184,11 +184,6 @@ resource "google_cloud_run_v2_service" "attendance_service" {
         value = "http/protobuf"
       }
 
-      # mount the Cloud SQL UNIX socket
-      volume_mounts {
-        name       = "cloudsql"
-        mount_path = "/cloudsql"
-      }
     }
 
     # define a volume that points to your Cloud SQL instance

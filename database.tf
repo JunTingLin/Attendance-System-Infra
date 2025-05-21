@@ -27,13 +27,13 @@ resource "google_sql_database_instance" "attendance_mysql" {
 
     # IP configuration
     ip_configuration {
-      ipv4_enabled    = true # Pulbic IP
+      ipv4_enabled    = false # Pulbic IP
       private_network = google_compute_network.attendance_vpc.id
 
-      authorized_networks {
-        name  = "cloudsqlproxy"
-        value = "0.0.0.0/0"
-      }
+      # authorized_networks {
+      #   name  = "cloudsqlproxy"
+      #   value = "0.0.0.0/0"
+      # }
     }
   }
 
