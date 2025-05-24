@@ -59,6 +59,7 @@ data "google_secret_manager_secret_version" "db_pass" {
 resource "google_sql_user" "attendance_user" {
   name        = data.google_secret_manager_secret_version.db_user.secret_data
   instance    = google_sql_database_instance.attendance_mysql.name
+  host     = "%"                        # allow connections from any host
   password_wo = data.google_secret_manager_secret_version.db_pass.secret_data
   # user password_wo instead of password
 }

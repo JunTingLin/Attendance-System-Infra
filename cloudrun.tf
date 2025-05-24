@@ -65,7 +65,7 @@ resource "google_vpc_access_connector" "attendance_connector" {
   network       = google_compute_network.attendance_vpc.name
 
   min_instances = 2
-  max_instances = 4
+  max_instances = 3
 
   depends_on = [google_project_service.cloudrun_apis]
 }
@@ -209,7 +209,7 @@ resource "google_cloud_run_v2_service" "attendance_service" {
 
     scaling {
       min_instance_count = 2
-      max_instance_count = 4
+      max_instance_count = 10
     }
   }
 
