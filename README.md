@@ -133,7 +133,8 @@ terraform destroy
 ```
 
 ### 補充
-[Terraform 部署流程影片Demo](https://github.com/JunTingLin/Attendance-System-Infra/discussions/2)
++ [Terraform 部署流程影片Demo](https://github.com/JunTingLin/Attendance-System-Infra/discussions/2)
++ [壓測筆記md](./README-Stress-Testing.md)
 
 
 
