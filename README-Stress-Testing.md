@@ -22,6 +22,8 @@
 
 ## 三、JMeter 結果摘要
 
+![image](https://github.com/user-attachments/assets/a7be7c6c-0ea4-4a62-9bdf-596140375a36)
+
 | Column         | Value         | 解讀                                                                                       |
 |----------------|---------------|--------------------------------------------------------------------------------------------|
 | #Samples       | 2,413         | 總共發出 2,413 次請求                                                                      |
@@ -42,25 +44,26 @@
 
 ### 4.1 Requests（完成率）
 
-![Requests](./requests.png)  
+![image](https://github.com/user-attachments/assets/c8f8bbdf-f6fb-426f-88ef-fce5d41321f4)
 - Y 軸：成功回應數（2xx）/ 秒（滑動平均、1m window）。  
 - 峰值約 **30 req/s**，與 JMeter 穩態 Throughput（33.5）在同一量級。
 
 ### 4.2 容器執行個體數 (Active)
 
-![Container Count](./container_count.png)  
+![image](https://github.com/user-attachments/assets/2bbda3e1-9e28-44e1-bab7-e7374ec20b1b)
 - 壓測期間從 **2 → 10 個** 實例，**15 分鐘** 後縮回至 **2**。  
 - 符合 `min_instance_count=2`、`max_instance_count=10`。
 
 ### 4.3 容器 CPU 使用率 (P50/P95/P99)
 
-![CPU Usage](./cpu_usage.png)  
+![image](https://github.com/user-attachments/assets/1d395850-16ec-4308-9cbf-290a730e145d)
 - P50 ≈ 0%，大部分時間無負載。  
 - P95/P99 短暫衝至 100%，對應冷啟動與爆擊瞬間。
 
 ### 4.4 並行要求上限 (Per-Instance Concurrency)
 
-![Concurrency](./concurrency.png)  
+![image](https://github.com/user-attachments/assets/67629a4b-b790-4718-98c1-6f3c9ab082af)
+ 
 | Percentile | Color | 含意                                                    |
 |------------|-------|---------------------------------------------------------|
 | P50        | 藍    | 一半時間點下，單台實例的併發連線 ≤ 該值（接近 0）         |
@@ -75,13 +78,12 @@
 
 ### 5.1 資料庫伺服器 (DB Server) CPU 使用率
 
-![DB Server CPU](./db_cpu.png)  
-- 壓測高峰時，DB Server CPU 使用率只有 **約 40%**，遠低於 100%。  
+![image](https://github.com/user-attachments/assets/22e9c285-d3a4-4eb5-9dfb-475bcef6cd63)
+- 壓測高峰時，DB Server CPU 使用率只有 **約 30%**，遠低於 100%。  
 - 這代表你在資料庫伺服器上的查詢、更新操作並未成為性能瓶頸。
 
 ### 5.2 Serverless VPC Access Connector
-
-![VPC Connector](./vpc_connector.png)  
+![image](https://github.com/user-attachments/assets/93f75c5c-29f1-4c6a-ba7c-7b19570597f9)
 - Connector 實例數始終維持在 **2**（`min_instances=2, max_instances=2`），並未自動擴容。  
 - CPU/網路 I/O 都保持在低位，顯示 2 台 Connector 已綽綽有餘。
 
@@ -93,19 +95,19 @@
 
 ### 6.1 Duration Bucket (Histogram)
 
-![Bucket](./otel_bucket.png)  
+![image](https://github.com/user-attachments/assets/5596152d-7f3e-4a74-abfb-cf34060a6969)
 - 各 latency 桶位 (0.0s…10s) 請求分佈熱力圖。  
 - 壓測高峰 (03:46–03:47) 時，多數請求落在 0.5–5s，少數落在 5–10s。
 
 ### 6.2 Request Count (Counter)
 
-![Count](./otel_count.png)  
+![image](https://github.com/user-attachments/assets/a4439797-15fe-4bea-9b20-8da0a3c93462)
 - 每秒完成的 handler-level 請求數，峰值 ~**9–10 req/s**。  
 - 低於 JMeter throughput，因 cold start 階段尚未計入 handler。
 
 ### 6.3 Duration Sum (Sum)
 
-![Sum](./otel_sum.png)  
+![image](https://github.com/user-attachments/assets/70949369-a69a-4918-9c74-3bfb28a478b2)
 - 每秒累計延遲總和，峰值 ~**11–12 秒**。  
 - 平均延遲可由 `sum/count` 計算：例如 `11s/9 ≈ 1.2s`。
 
