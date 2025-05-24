@@ -1,195 +1,126 @@
-## 一、準備工作
+# 壓測實驗筆記：JMeter + Cloud Run + OpenTelemetry
 
-1. 安裝 JMeter
-    +  [Apache JMeter 5.6.3](https://jmeter.apache.org/download_jmeter.cgi)
-    + 解壓後執行：
-    ```bash
-    # Linux / Mac
-    bin/jmeter.sh
-    # Windows
-    bin\jmeter.bat
-    ```
-> JMeter 支援以 CLI（Command-Line Interface）方式執行，適合整合到 CI/CD pipeline
+## 一、測試概述
+本次壓測目標為 `/api/employee`，透過 JMeter 模擬大量併發請求，並同時觀察 Cloud Run 與 OpenTelemetry 收集的各層指標，分析冷啟動、併發分流與延遲表現。
 
-## 二、建立 Test Plan
-1. 開啟 JMeter UI
-畫面左上角預設一個空的 Test Plan。
+---
 
-2. 新增 Thread Group（模擬使用者群組）
-    1. 右鍵點選 Test Plan
-    2. 選擇 Add > Threads (Users) > Thread Group
-    3. 設定 Thread Group 的參數
-        - Number of Threads (users): 模擬的使用者數量，同時發出請求的執行緒數，例如 800
-        - Ramp-Up Period (seconds): 所有使用者啟動的時間間隔，啟動 200 個執行緒所需時間，例如 1（秒）(瞬間爆擊)
-        - Loop Count: 每個使用者執行的次數，測試迴圈次數。本次實驗請可勾選 Infinite 進行無限迴圈測試，並搭配 Scheduler 使用。
-        - Scheduler(Specify Thread lifetime): 
-            + Duration (seconds)：測試總時長，例如 120 秒
-            + Startup delay (seconds)：啟動延遲時間，例如 0 秒
+## 二、測試設定（Thread Group 參數）
 
-3. 新增 HTTP Request
-    1. 右鍵點選剛才的 Thread Group
-    2. 選擇 Add > Sampler > HTTP Request
-    3. 設定 HTTP Request 的參數
-        - Protocol: 協定類型
-        - Server Name or IP: 目標伺服器的 IP 或網域名稱
-        - Port Number: 目標伺服器的埠號
-        - Method: HTTP 方法
-        - Path: 請求的路徑
-
-|       | localhost   | Cloud Run   |
-| ----------- | ----------- | ----------- |
-| Protocol      | HTTP       | HTTPS       |
-| Server Name   | localhost        | attendance-system-api-752674193588.asia-east1.run.app/api/employee        |
-| Port Number   | `8080`        | `443`        |
-| Method   | `GET`        | `GET`        |
-| Path   | `/api/employee`        | `/api/employee`        |
-
-4. **新增 HTTP Header Manager**（設定 JWT Token）  
-   1. 右鍵點選剛才的 Thread Group  
-   2. 選擇 Add > Config Element > HTTP Header Manager  
-   3. 在 Header Manager 裡新增一筆：  
-      - **Name**: `Authorization`  
-      - **Value**: `Bearer <your_JWT_token>`  
-
-5. 新增 Listener（即時檢視結果）
-    1. 右鍵點選剛才的 Thread Group
-    2. 選擇 Add > Listener > Summary Report / View Results Tree
+| Parameter                  | Value   | 說明                                            |
+|----------------------------|---------|-------------------------------------------------|
+| Number of Threads (users)  | 800     | 同時模擬 800 位虛擬使用者                        |
+| Ramp-Up Period (seconds)   | 1       | 在 1 秒內啟動所有執行緒（瞬間爆擊）               |
+| Loop Count                 | Forever | 無限迴圈發送請求                                 |
+| Specify Thread lifetime    | Duration=60s, Startup delay=0s | 每組執行緒持續 60 秒後自動停止       |
+| HTTP Request               | GET `/api/employee` | 目標路徑                                |
+| HTTP Header Manager        | Authorization: Bearer `<JWT>` | 加入認證 Token               |
+| Listener                   | Summary Report, View Results Tree | 統計與除錯                          |
 
 
-| 階段         | 推薦 Listener         | 原因                                           |
-| ---          | ---                  | ---                                           |
-| 開發／除錯    | View Results Tree    | 可以看到完整 request/response 內容，方便找問題   |
-| 一次性大規模測試 | Summary Report       | 記憶體友善，快速呈現整體 Throughput、延遲等統計數字 |
-| 同時關注錯誤率 | Aggregate Report     | 多出一個 “Error %” column，快速了解失敗請求比例 |
-| 自動化／CI/CD | Backend Listener     | 可推送到 InfluxDB/Grafana，長期保存、圖表化、整合 Pipeline |
+---
+
+## 三、JMeter 結果摘要
+
+| Column         | Value         | 解讀                                                                                       |
+|----------------|---------------|--------------------------------------------------------------------------------------------|
+| #Samples       | 2,413         | 總共發出 2,413 次請求                                                                      |
+| Average (ms)   | 21,762        | 客戶端端到端平均延遲約 21.8 秒                                                              |
+| Min (ms)       | 34            | 最快 0.034 秒                                                                              |
+| Max (ms)       | 67,762        | 最慢 67.8 秒                                                                               |
+| Std. Dev. (ms) | 26,851        | 延遲波動極大                                                                              |
+| Error %        | 0.00%         | 全部請求都成功                                                                              |
+| Throughput (/s)| 33.5          | 穩態平均每秒完成約 33.5 個請求（僅計算冷啟動後的穩定階段）                                    |
+| Received KB/s  | 29.21         | 每秒從伺服器下載 29 KB                                                                     |
+| Sent KB/s      | 12.32         | 每秒上傳 12 KB                                                                             |
+| Avg. Bytes     | 894           | 每筆回應平均 894 bytes                                                                     |
+
+> **關鍵觀察**：瞬間 800 條請求同時打入，Cloud Run cold start 約需 2–5 秒。在冷啟動期間大部分請求被卡住，導致端到端延遲大幅拉高。
+---
+
+## 四、Cloud Run 指標
+
+### 4.1 Requests（完成率）
+
+![Requests](./requests.png)  
+- Y 軸：成功回應數（2xx）/ 秒（滑動平均、1m window）。  
+- 峰值約 **30 req/s**，與 JMeter 穩態 Throughput（33.5）在同一量級。
+
+### 4.2 容器執行個體數 (Active)
+
+![Container Count](./container_count.png)  
+- 壓測期間從 **2 → 10 個** 實例，**15 分鐘** 後縮回至 **2**。  
+- 符合 `min_instance_count=2`、`max_instance_count=10`。
+
+### 4.3 容器 CPU 使用率 (P50/P95/P99)
+
+![CPU Usage](./cpu_usage.png)  
+- P50 ≈ 0%，大部分時間無負載。  
+- P95/P99 短暫衝至 100%，對應冷啟動與爆擊瞬間。
+
+### 4.4 並行要求上限 (Per-Instance Concurrency)
+
+![Concurrency](./concurrency.png)  
+| Percentile | Color | 含意                                                    |
+|------------|-------|---------------------------------------------------------|
+| P50        | 藍    | 一半時間點下，單台實例的併發連線 ≤ 該值（接近 0）         |
+| P95        | 紫    | 95% 時間點下，單台併發 ≤ 該值（達 ~90），超過 `concurrency=80` |
+| P99        | 綠    | 99% 時間點下，單台併發 ≤ 該值（與 P95 重合，不易辨識）    |
+
+> **說明**：單台實例若併發超過 80，就立即觸發 Scale-Out，再起新實例。此圖正好顯示 P95 ≈ 90，觸發了從 2 → 10 的擴容。
+
+---
+
+## 五、DB 與 Serverless VPC Connector 指標
+
+### 5.1 資料庫伺服器 (DB Server) CPU 使用率
+
+![DB Server CPU](./db_cpu.png)  
+- 壓測高峰時，DB Server CPU 使用率只有 **約 40%**，遠低於 100%。  
+- 這代表你在資料庫伺服器上的查詢、更新操作並未成為性能瓶頸。
+
+### 5.2 Serverless VPC Access Connector
+
+![VPC Connector](./vpc_connector.png)  
+- Connector 實例數始終維持在 **2**（`min_instances=2, max_instances=2`），並未自動擴容。  
+- CPU/網路 I/O 都保持在低位，顯示 2 台 Connector 已綽綽有餘。
 
 
+---
+## 六、OpenTelemetry 指標
 
-## 三、觀察雲端與後端指標
+> **Drilldown Filter**：`http_route="/api/employee"`, `http_request_method="GET"`, `http_response_status_code="200"`
 
-### 3.1 GCP Cloud Monitoring（USE 模型）
-- **監控取向**：Usage, Saturation, Errors  
-- **關鍵指標**：  
-  - VPC Access Connector 實例數（無伺服器私有網路存取）  
-  - Cloud Run Container instances 數量  
-- **查看方式**：  
-  1. **Cloud Console → Monitoring → Metrics Explorer**  
-     - Metric: `vpc_access_connector.instances`、`run.googleapis.com/container/instance_count`  
-  2. **Cloud Run 服務面板**  
-     - 直接於 Cloud Run → 你的服務 → Metrics 分頁  
-  3. **VPC Network → Serverless VPC Access**  
-     - 查看 Connector 狀態與使用量  
+### 6.1 Duration Bucket (Histogram)
 
-### 3.2 Java OpenTelemetry Agent（RED 模型）
-- **監控取向**：Rate, Errors, Duration  
-- **關鍵指標**：  
-  - `http_server_request_duration_seconds_bucket`
-    - Histogram 各 latency 桶 (bucket) 的請求數分佈
-    - X 軸為時間、Y 軸為每個桶的範圍 (0.005s, 0.01s, …, 10s)
-    - 顏色深淺代表該桶在該時間點的請求量大小
-  - `http_server_request_duration_seconds_count`
-    - 每個時間區間內的請求總數 (counter)
-    - 對應 JMeter Summary Report 的 #Samples / 時間窗口
-  - `http_server_request_duration_seconds_sum`
-- **解讀說明**：  
-  1. **Request Rate** (`count`)：每秒請求量 = Δcount/Δtime  
-  2. **Error Rate** (可用 `http_server_requests_errors_total`、或比對 status code)  
-  3. **Latency**：平均延遲 = `sum / count`；Percentile 延遲由 bucket 計算，如 p95、p99 等  
+![Bucket](./otel_bucket.png)  
+- 各 latency 桶位 (0.0s…10s) 請求分佈熱力圖。  
+- 壓測高峰 (03:46–03:47) 時，多數請求落在 0.5–5s，少數落在 5–10s。
 
+### 6.2 Request Count (Counter)
 
-## 四、觸發與擴展原理
+![Count](./otel_count.png)  
+- 每秒完成的 handler-level 請求數，峰值 ~**9–10 req/s**。  
+- 低於 JMeter throughput，因 cold start 階段尚未計入 handler。
 
-### 1. Cloud Run
+### 6.3 Duration Sum (Sum)
 
-- **Scale-Out（擴展）**  
-  - 每個實例預設可同時處理 **80** 個併發請求（可透過 `concurrency` 調整）。  
-  - 當同時請求數 > `現有實例數 × concurrency` 時，Cloud Run 會自動啟動新實例，直到達到 `max_instance_count=10`。  
-  - **Cold start 時間**：依 runtime 而異，約需 **1–10 秒**。
+![Sum](./otel_sum.png)  
+- 每秒累計延遲總和，峰值 ~**11–12 秒**。  
+- 平均延遲可由 `sum/count` 計算：例如 `11s/9 ≈ 1.2s`。
 
-- **Scale-In（縮減）**  
-  - 空閒實例在處理完最後一筆請求後，**最多保留 15 分鐘** 再回收。  
-  - 已設定 `min_instance_count=2`，即使長時間無流量，也會維持至少 **2** 個實例隨時待命，不會降到 0。
+---
 
-### 2. Serverless VPC Access Connector
+## 七、指標差異與脈絡
 
-- **Scale-Out（擴展）**  
-  - 當流量需求增加，Connector 實例數會從 `min_instances=2` 自動擴展至 `max_instances=3`。
-
-- **Scale-In（縮減）**  
-  - **不會** 自動縮減實例數；若要降到更低，必須透過 Terraform 更新或重建該資源。
-
-
-## 五、2025/05/24 03:46 測試結果
-### 1. 設定按照第二點的 Thread Group 參數，執行並觀察
-
-### 2. JMeter Report
-#### summary Report
-+ #Samples = 2413：執行了 2,413 次請求
-+ Average = 21762 ms：平均每次要等 21.7 秒才拿到回應
-+ Min = 34 ms / Max = 67762 ms：最快 0.034 秒、最慢 67.8 秒
-+ Std. Dev. = 26851.17 ms：延遲相當不穩定，有很大波動
-+ Error % = 0.00%：沒有任何失敗請求
-+ Throughput = 33.5/sec：測試期間內，你每秒大概落地 33.5 個請求
-+ Received KB/sec = 29.21 / Sent KB/sec = 12.32：下載速率約 29 KB/s，上傳速率約 12 KB/s
-+ Avg. Bytes = 894：每次回傳內容約 894 bytes
-
-> 這裡數字不太理想，推測原因是Ramp-Up 設為 1 秒(瞬間爆擊)，代表所有使用者幾乎同時在 1 秒內一起衝 800 條請求，Cloud Run 要從 2 → 10 個 instance，cold-start 時間平均約 2–5 秒，在這幾秒內，幾乎所有的請求都打到還沒就緒的實例上，就會「卡住等回應」，才會看到平均 21.7 秒、最大 67.7 秒的超長延遲。
-
-#### View Results Tree
-從圖可看到所有請求都有正確拿到employee 資料，200 OK。
-
-
-### 3. cloud run 指標
-+ Requests（完成率）
-  - **Y 軸**：成功回應數（2xx）/ 秒。  
-  - **觀察**：高峰僅 ~30 req/s，因大批請求在 cold-start 階段仍在等待中，只有少部分完成。
-
-+ 容器執行個體數 (Active)  
-  - 壓測期間從 **2 → 10 個** 實例，隨後在約 **15 分鐘** 後回落至 **2**。  
-  - 與 `min_instance_count=2`, `max_instance_count=10` 相符。
-
-+ 容器 CPU 使用率 (P50/P95/P99)  
-  - 大部分時間無負載。  
-  - 短暫衝至 ~100%，對應冷啟動及初期流量。  
-  - 代表僅在啟動與爆擊時出現高負載，其餘時間實例都在空閒。
-
-+ 並行要求上限 (Concurrency) 
-  - **P95 (紫點)**  
-  - 壓測高峰時達到約 **90 條** in-flight 請求，超出每台 `concurrency=80` 的設定  
-  - 因此在這個時刻 Cloud Run 自動再起新實例  
-  - **P50 (藍點)**  
-    - 多數時間維持接近 **0**，因為在 scale-out 完成後，流量分散至多台實例，其中一半以上的樣本點閒置中  
-  - **P99 (綠點)**  
-    - 線條未明顯分離，常與 P95 重合，極端樣本又較少，圖上不易辨識  
-  - **重點**  
-    - 此圖展示的是 **單台實例** 的併發連線數，並非所有實例加總  
-    - 只要任一實例的併發超過 80，就會觸發 Scale-Out 至下一台
-
-### 6. 資料庫&Serverless VPC Access Connector 指標
-Connector 只有 2 台，但是它的處理能力還沒被耗盡（例如 queue、CPU 都沒飽和），所以不會啟動更多
-
-DB CPU 峰直只有 40%
-
-
-### 5. OpenTelemetry 指標
-以下三個面板透過 Grafana 讀取你的 OpenTelemetry Export，針對 `/api/employee` (GET, 200) 的請求進行分析。
-
-+ http_server_request_duration_seconds_bucket
-  - 這是一張 Histogram 各 latency bucket 的請求數分佈熱力圖。  
-  - X 軸顯示時間範圍，Y 軸顯示延遲桶位 (0.0s、0.01s、0.05s、0.1s、0.5s、1s、5s、10s)。  
-  - 顏色深淺代表該桶位在該時間點的請求量大小，深色表示請求量較多。  
-  - 壓測高峰 (03:46–03:47) 時，大多數請求落在 0.5–5 秒桶位，少數請求分佈到 5–10 秒。
-
-+ http_server_request_duration_seconds_count
-  - 此面板顯示每秒完成的請求總數 (counter)。  
-  - 該圖的峰值約為 9–10 requests/s，代表在應用程式層面實際處理並結束的請求速率。  
-  - JMeter 的 Summary Report 在 60 秒內發出了 2,413 次請求，理論上平均 throughput 為 40.2 requests/s，但 OpenTelemetry count 僅統計 handler level 的完成請求量，且各實例分流後的結果較低。
-
-+ http_server_request_duration_seconds_sum
-  - 此面板顯示每秒內所有請求延遲的總和，以秒為單位 (sum)。  
-  - 壓測高峰時，sum 約落在 10–12 秒之間。  
-  - 可透過 `Avg Latency = sum / count` 計算平均延遲，例如在某秒 `sum ≈ 11s`、`count ≈ 9`，則平均延遲約 1.2 秒。
+| 層級         | 指標                 | 時間解析度      | 觀測值           | 差異原因                                |
+|--------------|----------------------|---------------|------------------|-----------------------------------------|
+| Client (JMeter) | Throughput (~33.5/s) | 整段穩態期平均  | 33.5 req/s       | 端到端延遲包含 cold-start，僅計算穩態期  |
+| LB (Cloud Run) | Requests (~30/s)      | 1m 滑動平均     | 30 req/s         | Cold-start 期間完成率低，又用粗粒度平均   |
+| App (OTel)   | Count (~9–10/s)      | 1s scrape     | 9–10 req/s       | 只計算 handler 完成呼叫，不含未結束請求   |
 
 
 
+---
 
+以上即為本次壓測全貌及各層指標分析，涵蓋測試設定、JMeter 報表、Cloud Run 自動擴縮機制、OpenTelemetry 應用層觀測以及各指標之間的差異。
