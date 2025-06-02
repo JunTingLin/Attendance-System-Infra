@@ -1,4 +1,5 @@
 # Attendance-System-Infra
+![TSMC attendance system v1-Page-1 drawio](https://github.com/user-attachments/assets/cdf46f6d-1497-4699-b6a5-e2d1604e476b)
 
 ## 1. 前置準備
 + 安裝 Terraform（建議使用 1.12.0 以上版本）
@@ -135,6 +136,7 @@ terraform destroy
 ### 補充
 + [Terraform 部署流程影片Demo](https://github.com/JunTingLin/Attendance-System-Infra/discussions/2)
 + [壓測實驗筆記md](./README-Stress-Testing.md)
++ [前端firebase, cloudfunction部署](https://github.com/jhen-fang/Attendance-System-frontend/blob/main/README-firebase.md)
 
 
 
