@@ -138,8 +138,8 @@ terraform destroy
 + [壓測實驗筆記md](./README-Stress-Testing.md)
 + [前端firebase, cloudfunction部署](https://github.com/jhen-fang/Attendance-System-frontend/blob/main/README-firebase.md)
 
-
-
+### Grafana Cloud Dashboard
+![螢幕擷取畫面 2025-05-08 173231](https://github.com/user-attachments/assets/7dae0dda-0da9-442a-9de1-5d7f12d81197)
 
 
 
