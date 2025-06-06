@@ -128,10 +128,9 @@ terraform destroy
 ```
 
 這邊我也不知道為何最後的網路相關服務無法刪除，但應該可以不必理會，這些服務網絡連接通常不會產生額外費用。
-```
-│ Error: Unable to remove Service Networking Connection, err: Error waiting for Delete Service Networking Connection: Error code 9, message: Failed to delete connection; Producer services (e.g. CloudSQL, Cloud Memstore, etc.) are still using this connection.
-│ Help Token: AT3scP6hbfu80g4l4hclrxnKo-Pi7L5ISDAouij0PWbZ3C0dOGEKxwFNAQeed8hgH0CEkMZGXUEjiuwhySGtekIMy6jcDYY0bz9sUbOq6BEmZQ3I
-```
+
+### Grafana Cloud Dashboard
+![螢幕擷取畫面 2025-05-08 173231](https://github.com/user-attachments/assets/d717bb13-fcef-4531-b8aa-f278ece9f5e8)
 
 ### 補充
 + [Terraform 部署流程影片Demo](https://github.com/JunTingLin/Attendance-System-Infra/discussions/2)
